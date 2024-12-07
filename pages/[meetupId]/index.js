@@ -1,79 +1,66 @@
 //domian.com/meetupId
-import MeetupDetail from '../../components/meetups/MeetupDetail'
-import React from 'react'
-import { useRouter } from 'next/router'
-const dummyMeetups = [
-    {
-      id: "m1",
-      title: "the first meetup",
-      image:
-        "https://img.freepik.com/free-vector/making-order-coffee-shop_74855-5885.jpg",
-      address: "street 5,108,german street",
-    },
-    {
-      id: "m2",
-      title: "the second meetup",
-      image:
-        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRD1RWFp41v5VoHZKfgEDZofzC8ktkmkALjQw&s",
-      address: "sunny jump",
-    },
-  ];
-
-
-
+import MeetupDetail from "../../components/meetups/MeetupDetail";
+import React from "react";
+import { useRouter } from "next/router";
+import { MongoClient } from "mongodb";
+import { ObjectId } from "mongodb";
 const DetailsPage = (props) => {
-    const router=useRouter();
-    const {meetupId}=router.query;
-    const details=dummyMeetups.find((meet)=>meet.id==meetupId);
+  const router = useRouter();
+  const { meetupId } = router.query;
+  
 
-
-   
-    
   return (
     <div>
-        <h1>Details Page</h1>
-        <MeetupDetail image={props.meetupData.image} title={props.meetupData.title} address={props.meetupData.address} />
+      <h1>Details Page</h1>
+      <MeetupDetail
+        image={props.meetupData.image}
+        title={props.meetupData.title}
+        address={props.meetupData.address}
+        description={props.meetupData.description}
+      />
     </div>
-  )
+  );
+};
+
+export async function getStaticPaths() {
+  const client = await MongoClient.connect(
+    "mongodb+srv://cherukupallisukanya808:xZBNLdHusqmkKov4@cluster0.au8ga.mongodb.net/meetups?retryWrites=true&w=majority&appName=Cluster0"
+  );
+
+  const db = client.db();
+  const meetupsCollection = db.collection("meetups");
+  const meetups = await meetupsCollection.find({}, { _id: 1 }).toArray();
+  console.log(meetups);
+  client.close();
+  return {
+    fallback: false,
+    paths: meetups.map((meetup) => ({
+      params: { meetupId: meetup._id.toString() },
+    })),
+  };
 }
+export async function getStaticProps(context) {
+  const meetupId = context.params.meetupId;
+  console.log(meetupId);
+  const client = await MongoClient.connect(
+    "mongodb+srv://cherukupallisukanya808:xZBNLdHusqmkKov4@cluster0.au8ga.mongodb.net/meetups?retryWrites=true&w=majority&appName=Cluster0"
+  );
 
-export async function getStaticPaths(){
-    return {
-        fallback:true,
-        paths:[
-           {
-            params:{
-                meetupId:'m1'
-            }
-           },
-           {
-            params:{
-                meetupId:'m2'
-            }
-           },
-           {
-            params:{
-                meetupId:'m3'
-            }
-           }
+  const db = client.db();
+  const meetupsCollection = db.collection("meetups");
+  const selectedMeetup=await meetupsCollection.findOne({_id:new ObjectId(meetupId)});
 
-        ]
-    }
+  client.close();
+  return {
+    props: {
+      meetupData:{
+        title:selectedMeetup.title,
+        image:selectedMeetup.image,
+        address:selectedMeetup.address,
+        description:selectedMeetup.description,
+        id:selectedMeetup._id.toString()
+      }
+    },
+  };
 }
-export async function getStaticProps(context){
-    const meetupId=context.params.meetupId;
-    console.log(meetupId);
-    return {
-        props:{
-            meetupData:{
-
-                image:"https://img.freepik.com/free-vector/making-order-coffee-shop_74855-5885.jpg",
-                title:"teh first meetup",
-                address:"street 101,german silver"
-
-            }
-
-        }
-    };
-}
-export default DetailsPage
+export default DetailsPage;
